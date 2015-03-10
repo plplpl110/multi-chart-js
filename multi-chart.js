@@ -26,12 +26,32 @@ var MultiChartJS = {
 	
 	config : {
 		id : "multi-chart-js" ,
-		width : 1000,
-		height : 400,
-		lable : {
-			font : "ddd",
-			size : "32px",
-		}
+		layout : {
+			width : 1000,
+			height : 400,
+			backgroundCor : "",
+			xLable : {
+				start : "",
+				end : "",
+				space : 1 , //define the space between the lables
+				font : "ddd",
+				size : "32px",
+				color : "",
+			},		
+			yLable : {
+				top : 1,
+				ground : 10,
+				space : 1 , //define the space between the lables				
+				font : "ddd",
+				size : "32px",
+				color : "",
+			},
+			
+			tooltip : {
+				show : true,
+			},
+		},
+		
 	},
     /*
      * change the config of the chart.
