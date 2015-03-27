@@ -6,6 +6,13 @@
 		<script src="multi-chart.js"></script>
 	</head>
 	<body>
+		<div>
+			<center>
+				<h3>Example for showing change of the world's ten largest economies by GDP in years</h3>
+				<h3>The data is from <a href="http://en.wikipedia.org/wiki/World_Bank_historical_list_of_ten_largest_countries_by_GDP">Wikipedia</a> </h3>
+				<canvas id="multi-chart-js" /canvas>
+			</center>
+		</div>		
 		<script>
 			var data = {
 				2013 : {
@@ -298,13 +305,15 @@
 				},			
 			}
 			
-			//MultiChartJS.setConfig({lable : {font : 11111},});
+			MultiChartJS.setConfig({
+				layout : {
+					backgroundCor : "#e",
+				},
+			});
+				
+			MultiChartJS.draw();
+			//console.error("Error level");
 		</script>
-		<div>
-			<center>
-				<h3>Example for showing change of the world's ten largest economies by GDP in years</h3>
-				<h3>The data is from <a href="http://en.wikipedia.org/wiki/World_Bank_historical_list_of_ten_largest_countries_by_GDP">Wikipedia</a> </h3>
-			</center>
-		</div>
+
 	</body>
 </html>

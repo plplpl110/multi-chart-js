@@ -51,7 +51,12 @@ var MultiChartJS = {
 				show : true,
 			},
 		},
-		
+		frame : {
+			color : "#000000",
+			width : 2,
+			startX : 20,
+			startY : 20,
+		},		
 	},
     /*
      * change the config of the chart.
@@ -65,6 +70,30 @@ var MultiChartJS = {
         
         this.config = this.resetJSON(this.config, config);
 	},
+	
+    /*
+     * draw the chart.
+     */
+	draw : function() {
+		var config = this.config;
+		var maxWidth = config.layout.width;
+		var maxHeight = config.layout.height;
+	 	var frame = config.frame;
+		var startx = frame.startX;
+		var starty = frame.startY;
+	 	var ctx = this.creatCanvasObject();
+		if (ctx) {
+			// draw the frame
+		 	ctx.beginPath();
+			ctx.strokeStyle= frame.color;
+			ctx.lineWidth = frame.width;
+			ctx.rect(startx , starty , (maxWidth - 2 * startx) , (maxHeight - 2 * starty));
+			ctx.stroke();
+		};
+		
+			
+	},	
+	
 
     /*
      * reset the data in resouce json from the new one
@@ -90,4 +119,33 @@ var MultiChartJS = {
         
         return res;		
 	},
+	
+    /*
+     * create canvas object
+     * @param string id
+     * @return canvas object 
+     */	
+	creatCanvasObject : function() {
+		var layout = this.config.layout;
+		var obj = document.getElementById(this.config.id);
+		if (obj){
+			// set object perporty
+			obj.width = layout.width;
+			obj.height = layout.height;
+			if(layout.backgroundCor) {
+				obj.style.backgroundColor = layout.backgroundCor;
+			}
+			
+			var context = obj.getContext("2d");
+			if (context) {
+				return context;
+			} else {
+				console.error("The Tag of HTML Element is not <canvas>");
+			};
+		} else {
+			console.error("Not Get HTML Element by ID");
+		}
+		
+		return null;
+	},	
 }
