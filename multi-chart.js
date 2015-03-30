@@ -16,7 +16,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
- * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIabel FOR ANY CLAIM,
  * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
@@ -26,26 +26,11 @@ var MultiChartJS = {
 	
 	config : {
 		id : "multi-chart-js" ,
+		data : "",
 		layout : {
 			width : 1000,
 			height : 400,
 			backgroundCor : "",
-			xLable : {
-				start : "",
-				end : "",
-				space : 1 , //define the space between the lables
-				font : "ddd",
-				size : "32px",
-				color : "",
-			},		
-			yLable : {
-				top : 1,
-				ground : 10,
-				space : 1 , //define the space between the lables				
-				font : "ddd",
-				size : "32px",
-				color : "",
-			},
 			
 			tooltip : {
 				show : true,
@@ -54,9 +39,22 @@ var MultiChartJS = {
 		frame : {
 			color : "#000000",
 			width : 2,
-			startX : 20,
+			startX : 30, // space between frame and the canvas in X
 			startY : 20,
-		},		
+			xLabel : "",
+			xLabelSpan : 2,
+			yLabel : "",			
+			yLabelStyle : {
+				font : "bold 14px Arial",
+				fontColor : "#000000",
+				fontSpace : 20, // space between y label and frame
+				spacetoTop : 30, // space between first label and Top in Y frame 
+			},
+			pointStyle : {
+				font : "bold 30px Times New Roman",
+				fontColor : "#000000",			
+			}
+		},
 	},
     /*
      * change the config of the chart.
@@ -89,6 +87,47 @@ var MultiChartJS = {
 			ctx.lineWidth = frame.width;
 			ctx.rect(startx , starty , (maxWidth - 2 * startx) , (maxHeight - 2 * starty));
 			ctx.stroke();
+			
+			// draw x label and y label
+			var items =10;
+			var xLabel = frame.xLabel;
+			var yLabel = frame.yLabel;
+			var yLabelStyle = frame.yLabelStyle;
+			var pointStyle = frame.pointStyle;
+			var totalDates = xLabel.length;
+			var totalNums = yLabel.length;
+			var spacex = (maxWidth - (2.5 * startx)) / totalDates;			
+			var spacey = (maxHeight - (3 * starty)) / totalNums;
+			var beginy = starty + yLabelStyle.spacetoTop;
+			var shownum = 0;
+			var endx = maxWidth-startx;
+			var datas = config.data;
+			
+			for (var i = 0; i < totalDates; i++) {
+				var reverseIndex = totalDates - 1 -i;
+				var reversedate = frame.xLabel[reverseIndex];
+				
+				var pointPosition = startx + i * spacex;
+				for (var iy = beginy; iy < maxHeight-30; iy += spacey) {
+					// draw the y label
+					if (i == 0) {
+						ctx.font = yLabelStyle.font;
+						ctx.fillStyle= yLabelStyle.fontColor;
+						ctx.fillText(yLabel[shownum++] , startx - yLabelStyle.fontSpace, iy + 1);
+						ctx.fillText(shownum,endx - yLabelStyle.fontSpace,iy+1);
+					}
+					
+					// draw the point
+					if (reversedate in datas) {
+						ctx.font = pointStyle.font;
+						ctx.fillStyle = pointStyle.fontColor;
+						ctx.fillText("." , pointPosition - 4 , iy);
+					}
+				};
+			}			
+			
+			
+			
 		};
 		
 			
@@ -110,8 +149,19 @@ var MultiChartJS = {
         for(item in changed) {
             if(res[item] !== undefined) {
             	if(typeof(res[item]) == "object") {
-            		res[item] = this.resetJSON(res[item], changed[item]);
+            		// copy array 
+            		if (res[item].constructor == Array) {
+            			if(changed[item].constructor == Array) {
+            				for (var i=0; i < changed[item].length; i++) {
+	        					res[item].push(changed[item][i]);
+							};
+            			}
+            		} else {
+            			// copy json 
+	            		res[item] = this.resetJSON(res[item], changed[item]);
+            		}            		
             	} else {
+            		// copy string
             		res[item] = changed[item];
             	}
             }

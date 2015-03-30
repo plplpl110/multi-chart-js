@@ -14,7 +14,7 @@
 			</center>
 		</div>		
 		<script>
-			var data = {
+			var datas = {
 				2013 : {
 					"United States" : [1 , "......" , "North America"],
 					"China" : [2 , "......" , "Asia"],
@@ -305,10 +305,26 @@
 				},			
 			}
 			
+			var dates = [];
+			for (var i=1990; i < 2014; i++) {
+			  dates.push(i);
+			};
+			
+			var nums = [];
+			for (var i=1; i < 11; i++) {
+			  nums.push(i);
+			};			
+			
 			MultiChartJS.setConfig({
+				id : "multi-chart-js" ,
+				data : datas,
 				layout : {
-					backgroundCor : "#e",
+					backgroundCor : "#eeffff",
 				},
+				frame : {
+					xLabel : dates,
+					yLabel : nums,
+				}
 			});
 				
 			MultiChartJS.draw();
