@@ -299,14 +299,14 @@
 					"China" : [5 , "......" , "Asia"],
 					"India" : [6 , "......" , "Asia"],
 					"France" : [7 , "......" , "Europe"],
-					"Italy" : [8 , "......" , "Europe"],							
+					"Italy111" : [8 , "......" , "Europe"],							
 					"Brazil" : [9 , "......" , "South America"],
 					"United Kingdom" : [10 , "......" , "Europe"],
 				},			
 			}
 			
 			var dates = [];
-			for (var i=1990; i < 2014; i++) {
+			for (var i = 1990; i < 2014; i++) {
 			  dates.push(i);
 			};
 			
@@ -318,7 +318,14 @@
 			MultiChartJS.setConfig({
 				id : "multi-chart-js" ,
 				data : datas,
+				dataAttribute : {
+					"Europe" : "#EC870E",
+					"Asia" : "#D0770B",
+					"North America" : "#BD6B09",
+					"South America" : "#945305",
+				},				
 				layout : {
+					//width : 600,
 					backgroundCor : "#eeffff",
 				},
 				frame : {

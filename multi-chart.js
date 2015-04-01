@@ -23,10 +23,11 @@
  */
 
 var MultiChartJS = {
-	
 	config : {
 		id : "multi-chart-js" ,
 		data : "",
+		dataAttribute : "",
+		attributeDefaultCor : "black",
 		layout : {
 			width : 1000,
 			height : 400,
@@ -40,20 +41,32 @@ var MultiChartJS = {
 			color : "#000000",
 			width : 2,
 			startX : 30, // space between frame and the canvas in X
-			startY : 20,
+			startY : 30,
+			marginLeft : 35,
+			marginRight : 20,
+			marginTop : 20,
+			marginBottom : 35,			
+			
 			xLabel : "",
 			xLabelSpan : 2,
+			xLabelStyle : {
+				font : "bold 13px Arial",
+				fontColor : "#000000",
+				fontSpace : 20, // space between x label and frame
+				spaceOffset : 20, // x label offset 
+			},
 			yLabel : "",			
 			yLabelStyle : {
 				font : "bold 14px Arial",
 				fontColor : "#000000",
-				fontSpace : 20, // space between y label and frame
+				fontSpace : 23, // space between y label and frame
 				spacetoTop : 30, // space between first label and Top in Y frame 
 			},
 			pointStyle : {
-				font : "bold 30px Times New Roman",
-				fontColor : "#000000",			
-			}
+				font : "bold 32px Times New Roman",
+				breakStyle: "bold 60px Times New Roman",
+			},
+			drawLineWidth : 2,
 		},
 	},
     /*
@@ -77,60 +90,154 @@ var MultiChartJS = {
 		var maxWidth = config.layout.width;
 		var maxHeight = config.layout.height;
 	 	var frame = config.frame;
-		var startx = frame.startX;
-		var starty = frame.startY;
+		var marginLeft = frame.marginLeft;
+		var marginRight = frame.marginRight;
+		var marginTop = frame.marginTop;
+		var marginBottom = frame.marginBottom;
+		var marginX = marginLeft + marginRight;
+		var marginY = marginTop + marginBottom;
+		
 	 	var ctx = this.creatCanvasObject();
 		if (ctx) {
 			// draw the frame
 		 	ctx.beginPath();
 			ctx.strokeStyle= frame.color;
 			ctx.lineWidth = frame.width;
-			ctx.rect(startx , starty , (maxWidth - 2 * startx) , (maxHeight - 2 * starty));
+			ctx.rect(marginLeft , marginTop , (maxWidth - marginX) , (maxHeight - marginY));
 			ctx.stroke();
 			
 			// draw x label and y label
-			var items =10;
 			var xLabel = frame.xLabel;
 			var yLabel = frame.yLabel;
 			var yLabelStyle = frame.yLabelStyle;
+			var xLabelStyle = frame.xLabelStyle;
 			var pointStyle = frame.pointStyle;
 			var totalDates = xLabel.length;
 			var totalNums = yLabel.length;
-			var spacex = (maxWidth - (2.5 * startx)) / totalDates;			
-			var spacey = (maxHeight - (3 * starty)) / totalNums;
-			var beginy = starty + yLabelStyle.spacetoTop;
+			var spaceX = (maxWidth - (1.2 * marginX)) / totalDates;			
+			var spaceY = (maxHeight - (1.2 * marginY)) / totalNums;
+			var beginY = marginTop + yLabelStyle.spacetoTop;
 			var shownum = 0;
-			var endx = maxWidth-startx;
 			var datas = config.data;
 			
-			for (var i = 0; i < totalDates; i++) {
-				var reverseIndex = totalDates - 1 -i;
-				var reversedate = frame.xLabel[reverseIndex];
+			for (var dateIndex = 0; dateIndex < totalDates; dateIndex++) {
+				var reverseIndex = totalDates - 1 - dateIndex;
+				var pointPosition = marginLeft + dateIndex * spaceX;
 				
-				var pointPosition = startx + i * spacex;
-				for (var iy = beginy; iy < maxHeight-30; iy += spacey) {
+				for (var iy = beginY; iy < maxHeight - marginBottom; iy += spaceY) {
 					// draw the y label
-					if (i == 0) {
+					if (!dateIndex) {
+						var yLabelText = yLabel[shownum];
+						var yLabelLeftX = marginLeft - yLabelStyle.fontSpace;
+						var yLabelRightX = maxWidth - marginRight - yLabelStyle.fontSpace;
+						var yLabelY = iy + 2;
+						
+						// draw y label
 						ctx.font = yLabelStyle.font;
 						ctx.fillStyle= yLabelStyle.fontColor;
-						ctx.fillText(yLabel[shownum++] , startx - yLabelStyle.fontSpace, iy + 1);
-						ctx.fillText(shownum,endx - yLabelStyle.fontSpace,iy+1);
-					}
-					
-					// draw the point
-					if (reversedate in datas) {
-						ctx.font = pointStyle.font;
-						ctx.fillStyle = pointStyle.fontColor;
-						ctx.fillText("." , pointPosition - 4 , iy);
+						ctx.fillText(yLabelText , yLabelLeftX, yLabelY);
+						// draw y label in the end of x
+						ctx.fillText(yLabelText , yLabelRightX , yLabelY);
+						shownum++;
 					}
 				};
+				
+				// draw the point and line
+				var reversedate = frame.xLabel[reverseIndex];
+				if (reversedate in datas) {
+					// draw the line
+					var metaDatas = datas[reversedate];
+					
+					for (metaKey in metaDatas) {
+						var metaAttCor = config.attributeDefaultCor;
+						var metaValue = metaDatas[metaKey];
+						
+						// set arrtibute color
+						var attribute = metaValue[2];
+						if (config.dataAttribute[attribute] != undefined) {
+							metaAttCor = config.dataAttribute[attribute];
+						};
+						
+						// get the y position
+						var nowY = this.getRelPosition(metaValue[0], yLabel);
+						var startPointX = marginLeft + (totalDates - 1 - dateIndex) * spaceX;
+						var startPointY = beginY + nowY * spaceY;
+
+						// draw the point 
+						ctx.font = pointStyle.font;
+						ctx.fillStyle = metaAttCor;
+						ctx.fillText("." , startPointX - 3 , startPointY);
+							
+						// link to next point
+						for (var nextX = reverseIndex - 1; nextX >= 0; nextX--) {
+							var nextDate = xLabel[nextX];
+							if (datas[nextDate] != undefined) {
+								// check data in next date
+								var nextData = datas[nextDate];
+								if (nextData[metaKey] != undefined) {
+									// draw line
+									var nextY = this.getRelPosition(nextData[metaKey][0], yLabel);
+									var endPointX = marginLeft + nextX * spaceX;
+									var endPointY = beginY + nextY * spaceY;
+									ctx.strokeStyle = metaAttCor;
+									ctx.lineWidth = frame.drawLineWidth;
+									ctx.beginPath();
+								    ctx.moveTo(startPointX + 2, startPointY-2);
+					    	 		ctx.lineTo(endPointX + 2, endPointY-2);
+									ctx.stroke();										
+								} else {
+									// draw end point
+									ctx.font = pointStyle.breakStyle;
+									ctx.fillText(".", startPointX - 7, startPointY + 2);										
+								};
+								break;	
+							} else {
+								continue;
+							}
+						};
+						
+						// check endpoint
+						for (var preX = reverseIndex + 1; preX < totalDates; preX++) {
+							var preDate = xLabel[preX];
+							if (datas[preDate] != undefined) {
+								var preData = datas[preDate];
+								if (preData[metaKey] == undefined) {
+	                                ctx.font = pointStyle.breakStyle;
+	                                ctx.fillText(".", startPointX - 7, startPointY + 2);									
+								}								
+							}
+							break;							
+						}	
+					}
+				}
+
+				if ((dateIndex) % frame.xLabelSpan == 0) {
+					// draw mark point
+					 var markStart = maxHeight - marginBottom;
+					 var markEnd = maxHeight - marginBottom + 4;
+					 
+					 ctx.beginPath();
+					 ctx.strokeStyle= frame.color;
+					 ctx.moveTo(pointPosition , markStart);
+			    	 ctx.lineTo(pointPosition , markEnd);
+			    	 
+			    	 // draw the x label
+			    	 var xLabelText = xLabel[dateIndex];
+			    	 var xLabelX = pointPosition - xLabelStyle.spaceOffset;
+			    	 var xLabelY = maxHeight - marginBottom + xLabelStyle.fontSpace;
+			    	 
+			    	 ctx.font = xLabelStyle.font;
+			    	 ctx.fillStyle= xLabelStyle.fontColor;
+					 ctx.fillText(xLabelText , xLabelX , xLabelY);
+					 ctx.stroke();
+				};
+				
+			 	// // draw line
+				ctx.lineWidth = frame.drawLineWidth;
+				ctx.beginPath();
+
 			}			
-			
-			
-			
 		};
-		
-			
 	},	
 	
 
@@ -197,5 +304,34 @@ var MultiChartJS = {
 		}
 		
 		return null;
-	},	
+	},
+	
+    /*
+     * get the relative position in array
+     * @param string value 
+     * @param array  source
+     * @return float position 
+     */	
+     getRelPosition : function (value, source) {
+     	var position = 0.00;
+     	var length = source.length;
+     	for (var i=0; i < length; i++) {
+		   if (value >= source[i]) 
+		   		break;
+		};
+		position += i;
+		
+		// get the float num
+		var span = 0;
+		var floatNum = 0.00;
+		if (length > 1) {
+			span = Math.abs(source[0] - source[1]);
+		}
+     	if (span) {
+     		floatNum = (value - source[i]) / span;
+     	};
+     	position += floatNum;
+     	
+     	return position;
+     },		
 }
