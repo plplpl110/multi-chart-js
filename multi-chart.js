@@ -35,6 +35,27 @@ var MultiChartJS = {
 			
 			tooltip : {
 				show : true,
+				id : "multi-chart-tooltip",
+				event : "mousemove",
+				cursor : "pointer",
+				range : 8,
+				spaceX : 0,
+				spaceY : 0,
+				format : ["NO: ", "Name: ", "Detail: ", "Year: "],
+				/*
+				 * set the css of tool tip
+				 */
+				css : {
+					position : "absolute",
+					zIndex : 3,
+					top : 0,
+					left : 0,
+					color : "#000000",
+					overflow : "visible",
+					visibility : "hidden",
+					fontSize : "hidden",
+					textAlign : "left",
+				},
 			},
 		},
 		frame : {
@@ -90,6 +111,7 @@ var MultiChartJS = {
 		var maxWidth = config.layout.width;
 		var maxHeight = config.layout.height;
 	 	var frame = config.frame;
+	 	var toolTipPoints = new Array();
 		var marginLeft = frame.marginLeft;
 		var marginRight = frame.marginRight;
 		var marginTop = frame.marginTop;
@@ -97,7 +119,9 @@ var MultiChartJS = {
 		var marginX = marginLeft + marginRight;
 		var marginY = marginTop + marginBottom;
 		
-	 	var ctx = this.creatCanvasObject();
+	 	var canvasObject = this.creatCanvasObject();
+	 	var ctx = canvasObject.getContext("2d");
+	 	
 		if (ctx) {
 			// draw the frame
 		 	ctx.beginPath();
@@ -151,6 +175,11 @@ var MultiChartJS = {
 					for (metaKey in metaDatas) {
 						var metaAttCor = config.attributeDefaultCor;
 						var metaValue = metaDatas[metaKey];
+						var detail = metaValue[1];
+						/*
+						 * meataValue format
+						 * [yLable, detail , attribute]
+						 */
 						
 						// set arrtibute color
 						var attribute = metaValue[2];
@@ -159,14 +188,43 @@ var MultiChartJS = {
 						};
 						
 						// get the y position
-						var nowY = this.getRelPosition(metaValue[0], yLabel);
+						var valueinY = metaValue[0];
+						var nowY = this.getRelPosition(valueinY, yLabel);
 						var startPointX = marginLeft + (totalDates - 1 - dateIndex) * spaceX;
 						var startPointY = beginY + nowY * spaceY;
 
 						// draw the point 
 						ctx.font = pointStyle.font;
 						ctx.fillStyle = metaAttCor;
-						ctx.fillText("." , startPointX - 3 , startPointY);
+						var drawPointX = startPointX - 3;
+						var drawPointY = startPointY;
+						ctx.fillText("." , drawPointX , startPointY);
+						
+						/* start save the point info to tool tip
+						 *	{
+						 * 		location : {
+						 * 			x : "",
+						 * 			y : "",
+						 * 		},
+						 * 		content : {
+						 * 			data : [<NO.>, <Name>, <Detail>, <Year>],
+						 * 			color : ""
+						 * 		}
+						 * 	}
+						 */
+						var nowPoint = {};
+						nowPoint.location = {
+							x : startPointX,
+							y : startPointY - 2,
+						};
+						nowPoint.content = {
+							data : [valueinY, metaKey, detail, reversedate],
+							color : metaAttCor,
+						};
+						toolTipPoints.push(nowPoint);
+						/*
+						 * end save the point info to tool tip
+						 */
 							
 						// link to next point
 						for (var nextX = reverseIndex - 1; nextX >= 0; nextX--) {
@@ -182,8 +240,8 @@ var MultiChartJS = {
 									ctx.strokeStyle = metaAttCor;
 									ctx.lineWidth = frame.drawLineWidth;
 									ctx.beginPath();
-								    ctx.moveTo(startPointX + 2, startPointY-2);
-					    	 		ctx.lineTo(endPointX + 2, endPointY-2);
+								    ctx.moveTo(startPointX, startPointY-2);
+					    	 		ctx.lineTo(endPointX, endPointY-2);
 									ctx.stroke();										
 								} else {
 									// draw end point
@@ -231,12 +289,22 @@ var MultiChartJS = {
 					 ctx.fillText(xLabelText , xLabelX , xLabelY);
 					 ctx.stroke();
 				};
-				
-			 	// // draw line
-				ctx.lineWidth = frame.drawLineWidth;
-				ctx.beginPath();
-
-			}			
+			}
+						
+			//handle tooltip
+			var toolTipConfig = config.layout.tooltip;
+			// ste tooltip config, to record the space between tooltip and the point
+			toolTipConfig.spaceX = spaceX;
+			toolTipConfig.spaceY = spaceY;
+			
+			if (toolTipConfig.show) {
+				var toolTipObject = this.ToolTipObject;
+				// init tooltip
+				toolTipObject.load(canvasObject, toolTipConfig);
+				toolTipObject.run(toolTipPoints);
+			}
+		} else {
+			console.error("The Tag of HTML Element is not <canvas>");
 		};
 	},	
 	
@@ -279,7 +347,6 @@ var MultiChartJS = {
 	
     /*
      * create canvas object
-     * @param string id
      * @return canvas object 
      */	
 	creatCanvasObject : function() {
@@ -293,12 +360,7 @@ var MultiChartJS = {
 				obj.style.backgroundColor = layout.backgroundCor;
 			}
 			
-			var context = obj.getContext("2d");
-			if (context) {
-				return context;
-			} else {
-				console.error("The Tag of HTML Element is not <canvas>");
-			};
+			return obj;
 		} else {
 			console.error("Not Get HTML Element by ID");
 		}
@@ -333,5 +395,227 @@ var MultiChartJS = {
      	position += floatNum;
      	
      	return position;
-     },		
+     },	
+     
+    /*
+     * an object to show more info of one item
+     */	
+     ToolTipObject : {
+     	toolTipElement : "",
+     	serverElement : "",
+     	format : "",
+     	cursor : "",
+     	range : "",
+     	event : "",
+     	id : "",
+     	css : "",
+
+		/*
+		 * init the config
+		 */     	
+     	load : function (serverElement, config) {
+     		if (typeof(config) == "object") {
+     			// init config
+	     		this.serverElement = serverElement;
+	     		
+	     		var initConfig = ["id", "format", "cursor", "range", "event", "css", "spaceX", "spaceY"];
+	     		for (var i=0; i < initConfig.length; i++) {
+				   var oneConfig = initConfig[i];
+				   if (!config[oneConfig] || undefined == config[oneConfig]) {
+				   		console.error("the config of tooltip :" + oneConfig + " is empty or missing.");
+				   		return false;
+				   }
+				   
+				   this[oneConfig] = config[oneConfig];
+				};
+	     		
+	     		// create tooltip object
+	     		this.creatToolTip(this.id);
+     		} else {
+ 				console.error("Not input the right config for ToolTip");     			
+     			return null;
+     		}
+     		
+     	},
+
+		/*
+		 *  run combine the funtion to the element
+		 */     	
+     	run : function (points) {
+     		// check if input is array
+     		if (!(points instanceof Array)) {
+     			console.error("input of ToolTip popUp function is not array.");
+     			return null;
+     		};
+     		
+     		// read the parameter from config   		
+     		var serverElement = this.serverElement;
+     		var toolTipElement = this.toolTipElement;
+  	  		var objectStyle = toolTipElement.style;
+  	  		var range = this.range;
+  	  		var format = this.format;
+     		var cursor = this.cursor;
+     		var spaceX = this.spaceX;
+     		var spaceY = this.spaceY;
+     		
+			var absX = this.getAbsoluteLocation(serverElement).absoluteLeft;    		     		
+			var absY = this.getAbsoluteLocation(serverElement).absoluteTop;    		     		
+		    /*
+		     * show tool tips
+		     * @param boolean flag 
+		     * @param array points [{
+		     * 							location : {
+		     * 								x : "",
+		     * 								y : "",
+		     * 							},
+		     * 							content : {
+		     * 								data : [<NO.>, <Name>, <Detail>, <Year>],
+		     * 								color : ""
+		     * 							}
+		     * 						},
+		     * 						... 
+		     *					    ] 
+		     */	       	
+	     	var popUp = function (event) {
+				// get location of serverElement
+				var left = document.documentElement.scrollLeft || document.body.scrollLeft;				
+				var top = document.documentElement.scrollTop || document.body.scrollTop;
+				var serverX = absX - left; 
+				var serverY = absY - top;  	     		
+				// get current cursor location
+				var event = this.event || window.event;
+				var cursorX = event.clientX;
+				var cursorY = event.clientY;
+				// get the relative position
+				var relPositionX = cursorX - serverX;
+				var relPositionY = cursorY - serverY;
+	     		
+	     		for (var i=0; i < points.length; i++) {
+					var point = points[i];
+					
+					// check the if the cursor is over the point
+					var location = point.location;
+					var distanceX = relPositionX - location.x;
+					var distanceY = relPositionY - location.y;
+					var nearXFlag = (Math.abs(distanceX) <= range) ? 1 : 0;
+				    var nearYFlag = (Math.abs(distanceY) <= range) ? 1 : 0;	
+				    
+				    // if the cursor over the point
+				    if (nearXFlag && nearYFlag) {
+				    	// make the cursor style as the config setting
+		  	  			serverElement.style.cursor = cursor;
+			  		
+				  		//handle tooltip content
+				  		var content = point.content;
+				  		var tipContent = "";
+				  		var data = content.data;
+				  		for (var i=0; i < format.length; i++) {
+				  			tipContent += format[i] + data[i] + "<br>";
+						};	
+						toolTipElement.innerHTML = tipContent;
+	
+						//handle tooltip style
+						// get the location of tooltip	
+						var toolTipX = cursorX + left - 1.5 * spaceX;			
+						var toolTipY = cursorY + top - 3 * spaceY;			
+				  		objectStyle.backgroundColor = content.color;
+						objectStyle.visibility="visible";
+						objectStyle.left= toolTipX + "px";
+						objectStyle.top = toolTipY + "px";
+						
+						break;			    	
+				    } else {
+				    	// clear the style of cursor and clear content of tooltip
+						serverElement.style.cursor = "";
+					  	objectStyle.innerHTML=""
+					 	objectStyle.visibility="hidden";			    	
+				    };		   
+				};
+	     	};
+     		
+     		this.addHandler(this.serverElement, this.event, popUp);
+     	},
+
+	    /*
+	     * create tooltip element
+	     * @param string id
+	     * @return dom element object 
+	     */	      	
+     	creatToolTip : function (id){
+     		if (id) {
+	     		var toolTipElement = document.createElement("div");
+	     		toolTipElement.innerHTML = "";
+	     		toolTipElement.id = id;
+				
+				// append element to html	     		
+	     		document.body.appendChild(toolTipElement);
+	     		
+	     		// set tooltipelement
+	     		var toolTipElement = document.getElementById(id);
+	     		this.toolTipElement = toolTipElement;
+	     		
+	     		// set css 
+	     		var style = toolTipElement.style;
+	     		var css = this.css;
+	     		for (item in css) {
+	     			style[item] = css[item];
+	     			if (style[item] == undefined) {
+	     				console.error("wrong name at css of tooltip of " + item);
+	     			}
+	     		}
+     		} else {
+				console.error("Empty ToolTip ID"); 
+				return null;    			
+     		};
+     	},
+     
+	    /*
+	     * get the absolute location of element
+	     * @param object element 
+	     * @return json location 
+	     */	     	
+		getAbsoluteLocation : function (element) {
+		    if ( arguments.length != 1 || element == null ){ 
+		        return null; 
+		    } 
+		    var offsetTop = element.offsetTop; 
+		    var offsetLeft = element.offsetLeft; 
+		    var offsetWidth = element.offsetWidth; 
+		    var offsetHeight = element.offsetHeight;
+		     
+		    while( element = element.offsetParent ) { 
+		        offsetTop += element.offsetTop; 
+		        offsetLeft += element.offsetLeft; 
+		    }
+		     
+		    return {
+		    	absoluteTop: offsetTop,
+		    	absoluteLeft: offsetLeft, 
+		        offsetWidth: offsetWidth,
+				offsetHeight: offsetHeight
+			};      		
+		}, 
+     	
+	    /*
+	     * add event lisener to the element
+	     * @param DOM object element 
+	     * @param string type 
+	     * @param function handler 
+	     */	     	
+		addHandler : function (element,type,handler) {
+			if (element.addEventListener) {
+				element.addEventListener(type,handler,false);
+				return true;
+            } else if (element.attachEvent) {
+                element.attachEvent("on" + type,handler);
+                return true;
+            } else {
+                element["on" + type] = handler;
+                return true;
+            }
+            
+            return false;
+		},
+     }     
+     	
 }
